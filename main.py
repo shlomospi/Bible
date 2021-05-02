@@ -13,8 +13,8 @@ def gen_book_vocab(books, chapters = None, verses = None):
 
     for i in range(len(books)):
 
-        word_occurences_this = {}
-        word_count = 0
+        word_occurences_this = {} # Dictionary of word occurences of the given corpus which will be added to word_occurences
+        word_count = 0 # Word counter of the given corpus
 
         #### Extracting word indices of the desired corpus and generating a title string for the key in the main dictionary
         if chapters != None and verses != None:
@@ -32,7 +32,7 @@ def gen_book_vocab(books, chapters = None, verses = None):
         word_indices = L.d(all_words, 'word')  # retrieve the word nodes with L.d()
         word_count += len(word_indices) # Counting all words in this corpus
 
-        #### Looping over all word indices to count the words and add them to the vocabulary
+        #### Looping over all word indices to count the words and add them to word_occurences_this
         for word_idx in word_indices:
 
             word_lexeme = F.lex.v(word_idx)
@@ -52,15 +52,15 @@ def gen_book_vocab(books, chapters = None, verses = None):
         word_occurences_this = dict(sorted(word_occurences_this.items(), key=lambda item: item[1]))
         word_occurences[title] = word_occurences_this
 
-    #### Looping over unique words and summing up their occurences in all corpora ####
+    #### Looping over unique words and summing up their occurences NORMALIZED BY WORD_COUNT of the given corpus in all corpora ####
     for word in vocab:
-        unique_word_panCorpora[word] = [word_occurences[titles[i]].get(word, 0) for i in range(len(titles))]
+        unique_word_panCorpora[word] = [word_occurences[titles[i]].get(word, 0) / word_occurences[titles[i]]["word_count"]  for i in range(len(titles))]
 
     return word_occurences, vocab, unique_word_panCorpora
 
 word_occurences, vocab, unique_word_panCorpora = gen_book_vocab(["Genesis", "Exodus"],)
 
-print(vocab)
+# print(vocab)
 # print(len(word_occurences))
 # print(word_occurences["Exodus"])
-# print(unique_word_panCorpora)
+print(unique_word_panCorpora)
