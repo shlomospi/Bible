@@ -32,7 +32,8 @@ def gen_book_vocab(books, chapters = None, verses = None):
                 word_occurences[word_lexeme] = 1
                 # word_occurences[T.text(word_idx)] = 1
 
-    return word_occurences, word_count
+        word_occurences = sorted(word_occurences.items(), key=lambda x: x[1], reverse=True)
+        return word_occurences, word_count
 
 word_occurences, word_count = gen_book_vocab(["Genesis", "Exodus"],)
 
