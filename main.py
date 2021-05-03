@@ -10,7 +10,7 @@ def gen_book_vocab(books, chapters = None, verses = None):
     vocab = [] # A vocabulary containing all unique words in all corpora
     word_occurences = {} # Dictionary containing other dictionaries, one per corpus, containing words and their recurrence
     unique_word_panCorpora = {} # A dictionary containing all unique words in all corpora and their absolute probability of each word to belong to a given corpus.
-    word_probs_softrmax = {} # A dictionary containing entries similar to unique_words_panCorpora, but instead of the absolute probability of each word to belong to a given corpus - it calculates the softmax value thereof
+    word_probs_softmax = {} # A dictionary containing entries similar to unique_words_panCorpora, but instead of the absolute probability of each word to belong to a given corpus - it calculates the softmax value thereof
     titles = []
 
     for i in range(len(books)):
@@ -59,9 +59,9 @@ def gen_book_vocab(books, chapters = None, verses = None):
     #### Looping over unique words and summing up their occurences NORMALIZED BY WORD_COUNT of the given corpus in all corpora ####
     for word in vocab:
         unique_word_panCorpora[word] = [(word_occurences[titles[i]].get(word, 0) / word_occurences[titles[i]]["word_count"]) * (word_occurences[titles[i]]["word_count"] / word_count_total) for i in range(len(titles))]
-        word_probs_softrmax[word] = [np.exp(np.log(unique_word_panCorpora[word][i])) / np.sum(np.array(np.exp(np.log(unique_word_panCorpora[word])))) for i in range(len(titles))]
+        word_probs_softmax[word] = [np.exp(np.log(unique_word_panCorpora[word][i])) / np.sum(np.array(np.exp(np.log(unique_word_panCorpora[word])))) for i in range(len(titles))]
 
-    return word_occurences, vocab, unique_word_panCorpora, word_probs_softrmax
+    return word_occurences, vocab, unique_word_panCorpora, word_probs_softmax
 
 word_occurences, vocab, unique_word_panCorpora, word_probs_softmax = gen_book_vocab(["Genesis", "Exodus"],)
 
