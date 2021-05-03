@@ -63,9 +63,9 @@ def gen_book_vocab(books, chapters = None, verses = None):
 
     return word_occurences, vocab, unique_word_panCorpora, word_probs_softrmax
 
-word_occurences, vocab, unique_word_panCorpora, word_probs_softrmax = gen_book_vocab(["Genesis", "Exodus"],)
+word_occurences, vocab, unique_word_panCorpora, word_probs_softmax = gen_book_vocab(["Genesis", "Exodus"],)
 
 # print(vocab)
 # print(len(word_occurences))
 # print(word_occurences["Exodus"])
-print(word_probs_softrmax)
+print(word_probs_softmax)
