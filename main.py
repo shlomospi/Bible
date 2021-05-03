@@ -1,5 +1,6 @@
 import sys, collections, os
 import pprint as pp
+from pylab import *
 from tf.app import use
 A = use('bhsa:hot', hoist=globals())
 
@@ -8,7 +9,8 @@ def gen_book_vocab(books, chapters = None, verses = None):
 
     vocab = [] # A vocabulary containing all unique words in all corpora
     word_occurences = {} # Dictionary containing other dictionaries, one per corpus, containing words and their recurrence
-    unique_word_panCorpora = {} # A dictionary containing all unique words in all corpora and their occurence in each.
+    unique_word_panCorpora = {} # A dictionary containing all unique words in all corpora and their absolute probability of each word to belong to a given corpus.
+    word_probs_softrmax = {} # A dictionary containing entries similar to unique_words_panCorpora, but instead of the absolute probability of each word to belong to a given corpus - it calculates the softmax value thereof
     titles = []
 
     for i in range(len(books)):
@@ -52,15 +54,18 @@ def gen_book_vocab(books, chapters = None, verses = None):
         word_occurences_this = dict(sorted(word_occurences_this.items(), key=lambda item: item[1]))
         word_occurences[title] = word_occurences_this
 
+    word_count_total = np.sum(np.array([word_occurences[titles[i]]["word_count"] for i in range(len(titles))])) # Total amount of words in all corpora
+
     #### Looping over unique words and summing up their occurences NORMALIZED BY WORD_COUNT of the given corpus in all corpora ####
     for word in vocab:
-        unique_word_panCorpora[word] = [word_occurences[titles[i]].get(word, 0) / word_occurences[titles[i]]["word_count"]  for i in range(len(titles))]
+        unique_word_panCorpora[word] = [(word_occurences[titles[i]].get(word, 0) / word_occurences[titles[i]]["word_count"]) * (word_occurences[titles[i]]["word_count"] / word_count_total) for i in range(len(titles))]
+        word_probs_softrmax[word] = [np.exp(np.log(unique_word_panCorpora[word][i])) / np.sum(np.array(np.exp(np.log(unique_word_panCorpora[word])))) for i in range(len(titles))]
 
-    return word_occurences, vocab, unique_word_panCorpora
+    return word_occurences, vocab, unique_word_panCorpora, word_probs_softrmax
 
-word_occurences, vocab, unique_word_panCorpora = gen_book_vocab(["Genesis", "Exodus"],)
+word_occurences, vocab, unique_word_panCorpora, word_probs_softrmax = gen_book_vocab(["Genesis", "Exodus"],)
 
 # print(vocab)
 # print(len(word_occurences))
 # print(word_occurences["Exodus"])
-print(unique_word_panCorpora)
+print(word_probs_softrmax)
