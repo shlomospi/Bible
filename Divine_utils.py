@@ -128,16 +128,19 @@ def predictor(word_probs_softmax, verse, verbose = 0, prob_limits = 0.05):
         if word in word_probs_softmax:
             existing_words += 1.
             for corpus in range(nr_corpora):
-                if word_probs_softmax[word][corpus] < (1. / nr_corpora) - prob_limits or word_probs_softmax[word][corpus] > (1. / nr_corpora) + prob_limits:
-                    prob[word_idx][corpus] = word_probs_softmax[word][corpus]
-                    if verbose == 2:
-                        print("Probabaility for the corpus '{}' is: {}".format(corpus, prob[word_idx][corpus]))
+                prob[word_idx][corpus] = word_probs_softmax[word][corpus]
+                if verbose == 2:
+                    print("Probabaility for the corpus '{}' is: {}".format(corpus, prob[word_idx][corpus]))
+
+            if all((1. / nr_corpora) - prob_limits < word_prob < (1. / nr_corpora) + prob_limits for word_prob in prob[word_idx][:]):
+                if verbose > 0.9:
+                    print("The word '{0}' seems to be equally distributed in all corpora ({1}). "
+                            "Ignoring".format(word, word_probs_softmax[word][:]))
+                existing_words -= 1.
+                for corpus in range(nr_corpora):
+                    prob[word_idx][corpus] = 0
                 else:
-                    if verbose > 0.9:
-                        print("The word {0} seems to be equally distributed in all corpora ({1} for corpus nr. {2}). "
-                              "Ignoring".format(word, word_probs_softmax[word][corpus], corpus))
-                    existing_words -= 1.
-                    break
+                    continue
         elif verbose > 0.9:
             print("The word '{}' is not present in the vocabulary. Ignoring.".format(word))
     print("probabilities before normalization (exsiting words: {}): \n".format(existing_words), prob)
