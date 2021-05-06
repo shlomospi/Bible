@@ -4,11 +4,14 @@ import numpy as np
 import random
 A = use('bhsa:hot', hoist=globals())
 
-#### NAIVE BAYES FUNCTIONS START ####
 
-def gen_verse(book, chapter, verse, verbose=0):
+# NAIVE BAYES FUNCTIONS START
+
+
+def gen_verse(book, chapter, verse, verbose=0, lex_format="Hebrew"):
     """
     returns a list of lexemes of a selected verse
+    :param lex_format: format of lexemes. "Hebrew" for Hebrew
     :param book: Book name as string
     :param chapter: number of the chapter
     :param verse:  number of the verse
@@ -16,10 +19,14 @@ def gen_verse(book, chapter, verse, verbose=0):
     :return: returns a list of lexemes from the selected verse
     """
     indices = L.d(T.nodeFromSection((book, chapter, verse)), 'word')
-    verse_by_lexemes = [F.lex_utf8.v(word_idx) for word_idx in indices]
+    if lex_format == "Hebrew":
+        verse_by_lexemes = [F.lex_utf8.v(word_idx) for word_idx in indices]
+    else:
+        verse_by_lexemes = [F.lex.v(word_idx) for word_idx in indices]
     if verbose == 1:
         print(verse_by_lexemes)
     return verse_by_lexemes, book
+
 
 def gen_book_vocab(books, chapters = None, verses = None):
     """
@@ -37,14 +44,18 @@ def gen_book_vocab(books, chapters = None, verses = None):
                                      their respective softmax probabilities to belong to said book
     """
     vocab = [] # A vocabulary containing all unique words in all corpora
-    word_occurrences = {} # Dictionary containing other dictionaries, one per corpus, containing words and their recurrence
-    unique_word_panCorpora = {} # A dictionary containing all unique words in all corpora and their absolute probability of each word to belong to a given corpus.
-    word_probs_softmax = {} # A dictionary containing entries similar to unique_words_panCorpora, but instead of the absolute probability of each word to belong to a given corpus - it calculates the softmax value thereof
+    word_occurrences = {} # Dictionary containing other dictionaries, one per corpus, containing words and their
+    # recurrence
+    unique_word_panCorpora = {} # A dictionary containing all unique words in all corpora and their absolute
+    # probability of each word to belong to a given corpus.
+    word_probs_softmax = {} # A dictionary containing entries similar to unique_words_panCorpora, but instead of the
+    # absolute probability of each word to belong to a given corpus - it calculates the softmax value thereof
     titles = []
 
     for i in range(len(books)):
 
-        word_occurences_this = {} # Dictionary of word occurrences of the given corpus which will be added to word_occurrences
+        word_occurences_this = {} # Dictionary of word occurrences of the given corpus which will be added to
+        # word_occurrences
 
         # Extracting word indices of the desired corpus and generating a title string for the key in the main dictionary
         if chapters is not None and verses is not None:
@@ -63,7 +74,7 @@ def gen_book_vocab(books, chapters = None, verses = None):
         # retrieve the word nodes with L.d(). A list of the indices of the words in the target text
         word_count = len(word_indices)  # Counting all words in this corpus
 
-        # Looping over all word indices to count the words and add them to word_occurences_this
+        # Looping over all word indices to count the words and add them to word_occurrences_this
         for word_idx in word_indices:
 
             word_lexeme = F.lex_utf8.v(word_idx)
@@ -75,50 +86,64 @@ def gen_book_vocab(books, chapters = None, verses = None):
                 word_occurences_this[word_lexeme] = 1
                 # word_occurrences[T.text(word_idx)] = 1
 
-            #### Appending unique word to vocabulary
+            # Appending unique word to vocabulary
             if word_lexeme not in vocab:
                 vocab.append(word_lexeme)
-
 
         word_occurences_this["word_count"] = word_count
         word_occurences_this = dict(sorted(word_occurences_this.items(), key=lambda item: item[1]))
         word_occurrences[title] = word_occurences_this
 
-    word_count_total = np.sum(np.array([word_occurrences[titles[i]]["word_count"] for i in range(len(titles))])) # Total amount of words in all corpora
+    word_count_total = np.sum(np.array([word_occurrences[titles[i]]["word_count"] for i in range(len(titles))])) #
+    # Total amount of words in all corpora
 
-    # Looping over unique words and summing up their occurences NORMALIZED BY WORD_COUNT of the given corpus in all corpora
+    # Looping over unique words and summing up their occurences NORMALIZED BY WORD_COUNT of the given corpus in all
+    # corpora
     for word in vocab:
         unique_word_panCorpora[word] = [(word_occurrences[titles[i]].get(word, 0) / word_occurrences[titles[i]]["word_count"]) * (word_occurrences[titles[i]]["word_count"] / word_count_total) for i in range(len(titles))]
         word_probs_softmax[word] = [np.exp(np.log(unique_word_panCorpora[word][i])) / np.sum(np.array(np.exp(np.log(unique_word_panCorpora[word])))) for i in range(len(titles))]
 
     return word_occurrences, vocab, unique_word_panCorpora, word_probs_softmax
 
+
 def predictor(word_probs_softmax, verse, verbose = 0, prob_limits = 0.05):
     """
     This function uses the softmax vocabulary per word to predict which corpus the text belongs to
+    :param prob_limits: margin for ingnoring lexemes that have similar probabilities to belong to any book
+    :param verbose: 1 for printing ignored lexemes. 0 for not printing. 2 for also printing results for each lexeme.
     :param word_probs_softmax:
     :param verse: a list of lexemes of a verse
     :return: a list of softmax probabilities of the verse belonging to each book in the database
     """
-    nr_corpora = len(random.choice(list(word_probs_softmax.items()))[1]) # Choosing some random key in the dictionary to check the amount of relevant corpora
+    nr_corpora = len(random.choice(list(word_probs_softmax.items()))[1]) # Choosing some random key in the dictionary
+    # to check the amount of relevant corpora
     prob = np.zeros((len(verse), nr_corpora))
-    existing_words = 0. # normalizing by this value will keep the softmax of order unity, even if not all words of the input text exist in the class corpora
+    existing_words = 0. # normalizing by this value will keep the softmax of order unity, even if not all words of
+    # the input text exist in the class corpora
 
     for word_idx in range(len(verse)):
         word = verse[word_idx]
+        if verbose == 2:
+            print(word+" :")
         if word in word_probs_softmax:
             existing_words += 1.
             for corpus in range(nr_corpora):
                 if word_probs_softmax[word][corpus] < (1. / nr_corpora) - prob_limits or word_probs_softmax[word][corpus] > (1. / nr_corpora) + prob_limits:
                     prob[word_idx][corpus] = word_probs_softmax[word][corpus]
+                    if verbose == 2:
+                        print("Probabaility for the corpus '{}' is: {}".format(corpus, prob[word_idx][corpus]))
                 else:
-                    if verbose == 1:
-                        print("The word {0} seems to be equally distributed in all corpora ({1} for corpus nr. {2}). Ignoring".format(word, word_probs_softmax[word][corpus], corpus))
+                    if verbose > 0.9:
+                        print("The word {0} seems to be equally distributed in all corpora ({1} for corpus nr. {2}). "
+                              "Ignoring".format(word, word_probs_softmax[word][corpus], corpus))
                     existing_words -= 1.
                     break
-
+        elif verbose > 0.9:
+            print("The word '{}' is not present in the vocabulary. Ignoring.".format(word))
+    print("probabilities before normalization (exsiting words: {}): \n".format(existing_words), prob)
+    print("sum of probabilities for each word:\n", np.sum(prob, axis=1))
     prob = np.sum(prob, axis=0) / existing_words
 
     print("result for a {} limit margins".format(prob_limits))
-
+    print(prob)
     return prob
